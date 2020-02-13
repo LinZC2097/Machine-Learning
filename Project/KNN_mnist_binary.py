@@ -51,7 +51,7 @@ if __name__ == '__main__':
     for k in range(1, 50, 2):
         start_time = time.time()
 
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!", k)
         # print("the start time is %.2f" % start_time)
         neigh = KNeighborsClassifier(n_neighbors=k)
         neigh.fit(trainData, trainLabel)
