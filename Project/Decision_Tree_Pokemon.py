@@ -1,13 +1,7 @@
-from pyspark import SQLContext, SparkContext, conf
+from pyspark import SQLContext
 from pyspark.sql import SparkSession
-from pyspark.ml import Pipeline
-from pyspark.ml.classification import DecisionTreeClassifier
-from pyspark.ml.feature import StringIndexer, VectorIndexer
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from pyspark.mllib.tree import DecisionTree, DecisionTreeModel
-from pyspark.mllib.util import MLUtils
+from pyspark.mllib.tree import DecisionTree
 from pyspark.mllib.regression import LabeledPoint
-import pandas as pd
 
 
 def main():
@@ -17,7 +11,8 @@ def main():
     sqlContext = SQLContext(sc)
 
     spark = SparkSession.builder.appName('ml-bank').getOrCreate()
-    data = spark.read.csv('/Users/marsscho/Desktop/6364 Machine Learning/assignment/hw2/Pokemon.csv', header=True, inferSchema=True)
+    data = spark.read.csv('/Users/marsscho/Desktop/6364 Machine Learning/assignment/hw2/Pokemon.csv'
+                          , header=True, inferSchema=True)
     data.printSchema()
 
     data = sqlContext.read.format('com.databricks.spark.csv')\
@@ -25,37 +20,48 @@ def main():
         .load('/Users/marsscho/Desktop/6364 Machine Learning/assignment/hw2/Pokemon.csv')
     data.show()
 
-    # indexers = [StringIndexer(inputCol=column, outputCol=column + "_index").setHandleInvalid("keep").fit(data)
-    #             for column in ['Type1', 'Type2']]
-    #
-    #
-    # pipeline = Pipeline(stages=indexers)
-    # df_r = pipeline.fit(data).transform(data)
-    # print(type(df_r))
-    # # df_r.drop(['Type1', 'Type2'])
-    # df_r.drop(df_r.Type1).collect()
-    # df_r.show()
-    # print(df_r.Type1)
+    result = []
 
     rdd = data.rdd.map(lambda row: LabeledPoint(row[-1], row[:-1]))
 
     (trainingData, testData) = rdd.randomSplit([0.7, 0.3])
 
-    model = DecisionTree.trainClassifier(trainingData, numClasses=2, categoricalFeaturesInfo={0, 1},
-                                         impurity='gini', maxDepth=5, maxBins=32)
+    model = DecisionTree.trainClassifier(trainingData, numClasses=2, categoricalFeaturesInfo={0: 19, 1: 20},
+                                         impurity='entropy', maxDepth=3, maxBins=32)
 
-    # Evaluate model on test instances and compute test error
     predictions = model.predict(testData.map(lambda x: x.features))
     labelsAndPredictions = testData.map(lambda lp: lp.label).zip(predictions)
-    testErr = labelsAndPredictions.filter(
-        lambda lp: lp[0] != lp[1]).count() / float(testData.count())
-    print('Test Error = ' + str(testErr))
+    testErr = labelsAndPredictions.filter(lambda lp: lp[0] != lp[1]).count()
+
+    # lambda lp: lp[0] != lp[1]).count() / float(testData.count())
+    print("test err", testErr)
+    print("test data count:", testData.count())
+    print("test data count:", testData.count())
+    print('Test precision = ' + str(1 - testErr / float(testData.count())))
+    # result.append((depth, testErr))
     print('Learned classification tree model:')
     print(model.toDebugString())
 
-    # Save and load model
-    # model.save(sc, "target/tmp/myDecisionTreeClassificationModel")
-    # sameModel = DecisionTreeModel.load(sc, "target/tmp/myDecisionTreeClassificationModel")
+
+    # for depth in range(1, 20):
+    #
+    #     model = DecisionTree.trainClassifier(trainingData, numClasses=2, categoricalFeaturesInfo={0: 19, 1: 20},
+    #                                          impurity='entropy', maxDepth=depth, maxBins=32)
+    #
+    #     predictions = model.predict(testData.map(lambda x: x.features))
+    #     labelsAndPredictions = testData.map(lambda lp: lp.label).zip(predictions)
+    #     testErr = labelsAndPredictions.filter(lambda lp: lp[0] != lp[1]).count()
+    #
+    #     # lambda lp: lp[0] != lp[1]).count() / float(testData.count())
+    #     print("test err", testErr)
+    #     print("test data count:", testData.count())
+    #     print("test data count:", testData.count())
+    #     print('Test precision = ' + str(1 - testErr/float(testData.count())))
+    #     result.append((depth, testErr))
+    #     print('Learned classification tree model:')
+    #     print(model.toDebugString())
+    for val in result:
+        print(val)
 
 
 
